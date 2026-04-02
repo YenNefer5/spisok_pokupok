@@ -95,6 +95,34 @@
   font-size: 0.8125rem;
 }
 
+.error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #b23b45;
+  background: #fcedef;
+  border: 1px solid #f4cdd2;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+
+.filters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-filter {
+  background: #fff;
+  color: #3f3f3f;
+  border: 1px solid #d4d0c8;
+  padding: 0.5rem 0.75rem;
+}
+
+.btn-filter--active {
+  background: #2d6a4f;
+  color: #fff;
+  border-color: #2d6a4f;
+}
+
 .list-section {
   min-height: 2rem;
 }

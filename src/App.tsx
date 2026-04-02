@@ -4,11 +4,14 @@ import "./App.css";
 type Item = {
   id: string;
   name: string;
-  quantity: string;
+  quantity: number;
   bought: boolean;
 };
 
+type Filter = "all" | "bought" | "not-bought";
+
 const STORAGE_KEY = "spisok-pokupok-items";
+const MAX_NAME_LENGTH = 20;
 
 function loadItems(): Item[] {
   try {
@@ -26,7 +29,7 @@ function loadItems(): Item[] {
         "bought" in x &&
         typeof (x as Item).id === "string" &&
         typeof (x as Item).name === "string" &&
-        typeof (x as Item).quantity === "string" &&
+        typeof (x as Item).quantity === "number" &&
         typeof (x as Item).bought === "boolean"
     );
   } catch {
@@ -38,25 +41,46 @@ export default function App() {
   const [items, setItems] = useState<Item[]>(loadItems);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
   const add = useCallback(() => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
+    const trimmedName = name.trim();
+    const trimmedQuantity = quantity.trim();
+
+    if (!trimmedName) {
+      setError("Введите название товара, пожалуйста.");
+      return;
+    }
+
+    if (!trimmedQuantity) {
+      setError("Укажите количество: целое число от 1 и больше.");
+      return;
+    }
+
+    const numericQuantity = Number(trimmedQuantity);
+    const isInteger = Number.isInteger(numericQuantity);
+    if (!isInteger || numericQuantity < 1) {
+      setError("Количество должно быть целым числом: 1, 2, 3 и т.д.");
+      return;
+    }
+
     setItems((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
-        name: trimmed,
-        quantity: quantity.trim() || "—",
+        name: trimmedName,
+        quantity: numericQuantity,
         bought: false,
       },
     ]);
     setName("");
     setQuantity("");
+    setError("");
   }, [name, quantity]);
 
   const toggleBought = useCallback((id: string) => {
@@ -68,6 +92,12 @@ export default function App() {
   const remove = useCallback((id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
+
+  const visibleItems = items.filter((item) => {
+    if (filter === "bought") return item.bought;
+    if (filter === "not-bought") return !item.bought;
+    return true;
+  });
 
   return (
     <div className="app">
@@ -88,32 +118,68 @@ export default function App() {
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setError("");
+              }}
               placeholder="Например, молоко"
               autoComplete="off"
+              maxLength={MAX_NAME_LENGTH}
             />
           </label>
           <label className="field">
             <span className="label">Количество</span>
             <input
-              type="text"
+              type="number"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="1 л, 500 г"
+              onChange={(e) => {
+                setQuantity(e.target.value);
+                setError("");
+              }}
+              placeholder="1"
               autoComplete="off"
+              min={1}
+              step={1}
             />
           </label>
+          {error ? <p className="error">{error}</p> : null}
           <button type="submit" className="btn btn-primary">
             Добавить
           </button>
         </form>
 
+        <section className="filters" aria-label="Фильтр списка">
+          <button
+            type="button"
+            className={`btn btn-filter${filter === "all" ? " btn-filter--active" : ""}`}
+            onClick={() => setFilter("all")}
+          >
+            Все
+          </button>
+          <button
+            type="button"
+            className={`btn btn-filter${filter === "bought" ? " btn-filter--active" : ""}`}
+            onClick={() => setFilter("bought")}
+          >
+            Куплено
+          </button>
+          <button
+            type="button"
+            className={`btn btn-filter${
+              filter === "not-bought" ? " btn-filter--active" : ""
+            }`}
+            onClick={() => setFilter("not-bought")}
+          >
+            Не куплено
+          </button>
+        </section>
+
         <section className="list-section" aria-label="Список товаров">
-          {items.length === 0 ? (
+          {visibleItems.length === 0 ? (
             <p className="empty">Пока пусто — добавьте первый товар.</p>
           ) : (
             <ul className="list">
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <li
                   key={item.id}
                   className={`list-item${item.bought ? " list-item--bought" : ""}`}
